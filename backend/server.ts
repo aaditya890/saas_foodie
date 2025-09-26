@@ -303,7 +303,7 @@ Prefer quick, weeknight-friendly options.`.trim()
     if (!r.ok) return res.status(r.status).json({ error: await r.text() })
 
     const json = (await r.json()) as GeminiGenerateContentResponse
-    const text =
+    const text = 
       json?.candidates?.[0]?.content?.parts
         ?.map((p) => p?.text ?? "")
         .join("")

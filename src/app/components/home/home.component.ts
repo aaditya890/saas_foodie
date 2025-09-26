@@ -1,25 +1,25 @@
 import { Component, inject } from "@angular/core"
 import { CommonModule } from "@angular/common"
 import { FormsModule, ReactiveFormsModule } from "@angular/forms"
-import { Router } from "@angular/router"
-import { RecipeService, slugify } from "../../services/recipe.service"
+import { RecipeService } from "../../services/recipe.service"
+import { RecipeDetailDialogComponent } from "../../components/recipe-detail-dialog/recipe-detail-dialog.component" // Import RecipeDetailDialogComponent
+import { DialogService } from "../../services/dialog.service"
 import { Idea } from "../../models/idea.model"
 import { Category } from "../../models/category.model"
 import { RecipeDetail } from "../../models/recipe-detail.model"
-
 
 type Mode = "CHOOSE" | "DIRECT" | "CATEGORY" | "INGR" | "IDEAS" | "DETAIL"
 
 @Component({
   selector: "app-home",
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, RecipeDetailDialogComponent], // Add RecipeDetailDialogComponent to imports
   templateUrl: "./home.component.html",
   styleUrls: ["./home.component.scss"],
 })
 export class HomeComponent {
   private api = inject(RecipeService)
-  private router = inject(Router)
+  private dialogService = inject(DialogService)
 
   mode: Mode = "CHOOSE"
   loading = false
@@ -35,6 +35,7 @@ export class HomeComponent {
   ingredients: string[] = []
   ingredientInput = ""
   categoryIdeas: Idea[] = []
+  predefinedIngredients: string[] = [] // Add predefinedIngredients property
 
   // optional (home pe detail render karna ho to)
   detail: RecipeDetail | null = null
@@ -61,6 +62,7 @@ export class HomeComponent {
     this.categoryIdeas = [] // clear category results
     this.selectedCategory = null
     this.ingredients = []
+    this.predefinedIngredients = [] // Clear predefined ingredients when switching to direct search
   }
 
   useCategory() {
@@ -96,6 +98,81 @@ export class HomeComponent {
     this.selectedCategory = cat
     this.ingredients = []
     this.mode = "INGR"
+    switch (cat.id) {
+      case "indian":
+        this.predefinedIngredients = [
+          "paneer",
+          "chicken",
+          "potato",
+          "onion",
+          "tomato",
+          "ginger",
+          "garlic",
+          "chilli",
+          "cumin",
+          "coriander",
+        ]
+        break
+      case "italian":
+        this.predefinedIngredients = [
+          "pasta",
+          "tomato",
+          "garlic",
+          "basil",
+          "mozzarella",
+          "parmesan",
+          "olive oil",
+          "onion",
+          "oregano",
+        ]
+        break
+      case "mexican":
+        this.predefinedIngredients = [
+          "tortilla",
+          "beans",
+          "cheese",
+          "avocado",
+          "tomato",
+          "onion",
+          "jalapeno",
+          "lime",
+          "cilantro",
+          "chicken",
+          "beef",
+        ]
+        break
+      case "chinese":
+        this.predefinedIngredients = [
+          "noodles",
+          "rice",
+          "soy sauce",
+          "ginger",
+          "garlic",
+          "broccoli",
+          "carrot",
+          "chicken",
+          "pork",
+          "tofu",
+        ]
+        break
+      case "thai":
+        this.predefinedIngredients = [
+          "coconut milk",
+          "lemongrass",
+          "galangal",
+          "chilli",
+          "fish sauce",
+          "rice noodles",
+          "chicken",
+          "shrimp",
+          "lime",
+          "basil",
+        ]
+        break
+      default:
+        this.predefinedIngredients = []
+        break
+    }
   }
 
   addIngredient() {
@@ -104,6 +181,13 @@ export class HomeComponent {
     const k = s.toLowerCase()
     if (!this.ingredients.includes(k)) this.ingredients.push(k)
     this.ingredientInput = ""
+  }
+
+  addPredefinedIngredient(ingredient: string) {
+    const k = ingredient.toLowerCase()
+    if (!this.ingredients.includes(k)) {
+      this.ingredients.push(k)
+    }
   }
 
   removeIngredient(i: number) {
@@ -132,13 +216,18 @@ export class HomeComponent {
 
   // detail — NAVIGATE IMMEDIATELY (no prefetch here)
   openDetail(idea: Idea) {
-    const cat = idea.categoryId ?? this.selectedCategory?.id ?? ""
-    const slug = slugify(idea.title)
-    this.router.navigate(["/recipe", slug], {
-      queryParams: {
-        q: this.query || null,
-        cat: cat || null,
-        ing: this.ingredients.join(",") || null,
+    this.loading = true
+    this.error = null
+    this.api.getRecipeDetail({ title: idea.title }).subscribe({
+      next: (recipe) => {
+        console.log("[v0] HomeComponent: Recipe detail loaded for dialog:", recipe)
+        this.dialogService.openDialog(recipe)
+        this.loading = false
+      },
+      error: (e) => {
+        console.error("[v0] HomeComponent: Failed to fetch recipe detail for dialog:", e)
+        this.error = "Failed to load recipe details. Please try again."
+        this.loading = false
       },
     })
   }
