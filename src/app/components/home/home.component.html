@@ -1,1 +1,120 @@
-<p>home works!</p>
+<div  class="relative min-h-screen bg-cover bg-center" style="background-image: url('assets/bg-img.png');">
+  <div class="absolute inset-0 bg-black opacity-40"></div>
+  <div class="relative z-10 mx-auto max-w-5xl px-4 py-10 text-white">
+    <div class="text-center mb-10">
+      <span class="inline-flex items-center gap-2 rounded-full border border-blue-300 bg-blue-900/20 px-4 py-1.5 text-sm font-medium shadow-sm text-blue-200">
+        ✨ Introducing Recipe Finder+
+      </span>
+      
+      <h1 class="mt-4 text-4xl font-extrabold tracking-tight text-white">
+        Build your <span class="text-blue-400">perfect recipe lineup</span> in seconds
+      </h1>
+      <p class="mt-2 text-blue-100">Type a dish or choose a category. Add ingredients to personalize ideas.</p>
+    </div>
+
+    <div class="mx-auto mb-6 flex w-full max-w-xl justify-center gap-3">
+      <button (click)="useDirect()"
+        class="rounded-xl border px-4 py-2 text-sm font-medium shadow-sm hover:bg-blue-700 transition"
+        [class.bg-blue-600]="mode==='DIRECT'"
+        [class.text-white]="mode==='DIRECT'"
+        [class.border-blue-600]="mode==='DIRECT'"
+        [class.bg-gray-800]="mode!=='DIRECT'"
+        [class.border-gray-700]="mode!=='DIRECT'"
+        [class.text-gray-200]="mode!=='DIRECT'">Direct Search</button>
+
+      <button (click)="useCategory()"
+        class="rounded-xl border px-4 py-2 text-sm font-medium shadow-sm hover:bg-blue-700 transition"
+        [class.bg-blue-600]="mode==='CATEGORY' || mode==='INGR'"
+        [class.text-white]="mode==='CATEGORY' || mode==='INGR'"
+        [class.border-blue-600]="mode==='CATEGORY' || mode==='INGR'"
+        [class.bg-gray-800]="mode!=='CATEGORY' && mode!=='INGR'"
+        [class.border-gray-700]="mode!=='CATEGORY' && mode!=='INGR'"
+        [class.text-gray-200]="mode!=='CATEGORY' && mode!=='INGR'">Browse by Category</button>
+    </div>
+
+    <!-- Direct -->
+    <div *ngIf="mode==='DIRECT'" class="mx-auto w-full max-w-2xl">
+      <form (ngSubmit)="searchDirect()" class="flex gap-2">
+        <input [(ngModel)]="query" name="q" placeholder="e.g. paneer tikka, butter paneer"
+          class="h-11 w-full rounded-xl border border-gray-700 bg-gray-800 px-3 text-white outline-none focus:ring focus:ring-blue-500" />
+        <button class="h-11 rounded-xl bg-blue-600 px-5 text-white hover:bg-blue-700 transition" [disabled]="loading">
+          {{ loading ? 'Searching...' : 'Search' }}
+        </button>
+      </form>
+    </div>
+
+    <!-- Category pick -->
+    <div *ngIf="mode==='CATEGORY'" class="mt-6">
+      <h3 class="mb-3 text-lg font-semibold text-white">Pick a category</h3>
+      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <button *ngFor="let c of categories" (click)="pickCategory(c)"
+          class="flex items-start gap-3 rounded-2xl border border-gray-700 bg-gray-800 p-4 text-left shadow-sm hover:shadow-lg transition">
+          <div class="rounded-xl bg-blue-600/20 p-3 text-blue-300">🍽️</div>
+          <div>
+            <div class="font-semibold text-white">{{ c.title }}</div>
+            <div class="text-sm text-gray-400">{{ c.summary }}</div>
+          </div>
+        </button>
+      </div>
+    </div>
+
+    <!-- Ingredient entry -->
+    <div *ngIf="mode==='INGR'" class="mt-6">
+      <div class="mb-3 flex items-center gap-2">
+        <h3 class="text-lg font-semibold text-white">Category: {{ selectedCategory?.title }}</h3>
+        <button class="rounded-lg border border-gray-700 bg-gray-800 px-2 py-1 text-xs text-gray-200 hover:bg-gray-700 transition" (click)="mode='CATEGORY'">Change</button>
+      </div>
+
+      <div class="flex gap-2">
+        <input [(ngModel)]="ingredientInput" name="ing" placeholder="add ingredient e.g. tomato"
+          (keyup.enter)="addIngredient()"
+          class="h-11 w-full rounded-xl border border-gray-700 bg-gray-800 px-3 text-white outline-none focus:ring focus:ring-blue-500" />
+        <button class="h-11 rounded-xl bg-gray-700 px-4 text-white hover:bg-gray-600 transition" (click)="addIngredient()">Add</button>
+        <button class="h-11 rounded-xl bg-blue-600 px-5 text-white hover:bg-blue-700 transition" (click)="searchCategoryIdeas()" [disabled]="loading">
+          {{ loading ? 'Generating...' : 'Find ideas' }}
+        </button>
+      </div>
+
+      <div class="mt-3 flex flex-wrap gap-2">
+        <span *ngFor="let ing of ingredients; index as i"
+          class="inline-flex items-center gap-2 rounded-full border border-gray-700 bg-gray-800 px-3 py-1 text-sm text-gray-200 shadow-sm">
+          {{ ing }}
+          <button class="text-gray-400 hover:text-red-500 transition" (click)="removeIngredient(i)">✕</button>
+        </span>
+      </div>
+
+      <!-- Predefined Ingredients Section -->
+      <div *ngIf="predefinedIngredients.length > 0" class="mt-6">
+        <h4 class="mb-3 text-base font-semibold text-white">Popular ingredients for {{ selectedCategory?.title }}</h4>
+        <div class="flex flex-wrap gap-2">
+          <button *ngFor="let ing of predefinedIngredients" (click)="addPredefinedIngredient(ing)"
+            class="inline-flex items-center gap-2 rounded-full border border-blue-700 bg-blue-900/20 px-3 py-1 text-sm text-blue-200 hover:bg-blue-800 transition">
+            {{ ing }}
+          </button>
+        </div>
+      </div>
+      <!-- End Predefined Ingredients Section -->
+    </div>
+
+    <!-- Ideas -->
+    <div *ngIf="mode==='IDEAS'" class="mt-8">
+      <h3 class="mb-3 text-lg font-semibold text-white">Recipe ideas</h3>
+      <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <div *ngFor="let idea of (directIdeas.length ? directIdeas : categoryIdeas)"
+          class="flex overflow-hidden rounded-2xl border border-gray-700 bg-gray-800 shadow-lg">
+          <img *ngIf="idea.imageUrl" [src]="idea.imageUrl" [alt]="idea.imageAlt || idea.title"
+            class="h-32 w-40 object-cover">
+          <div class="flex flex-1 flex-col p-4">
+            <div class="font-semibold text-white">{{ idea.title }}</div>
+            <div class="mb-3 text-sm text-gray-400">{{ idea.blurb }}</div>
+            <div class="mt-auto">
+              <button class="rounded-lg bg-blue-600 px-3 py-1.5 text-sm text-white hover:bg-blue-700 transition"
+                (click)="openDetail(idea)">View details</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <app-recipe-detail-dialog></app-recipe-detail-dialog>
+</div>
